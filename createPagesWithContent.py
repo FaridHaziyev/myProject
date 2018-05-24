@@ -194,7 +194,7 @@ def tag_content(possible_words_dict, wn, english_content):
                 max_score[0] = score
                 max_score[1] = synset.name()
         
-        if max_score[0] > 0.1:
+        if max_score[0] > 0:
             tagged_content[word] = max_score[1]
 
     return tagged_content
@@ -218,10 +218,10 @@ if __name__ == "__main__":
     with open("../merged_eng_deu_dict.pkl", "rb") as dep:
         deu_en_dict = pickle.load(dep)
 
-    with open("../created_datas/sense_doc_empty_dict.pkl", "rb") as ev:
+    with open("../created_datas/sense_doc_dict_empty.pkl", "rb") as ev:
         sense_doc_dict = pickle.load(ev)
 
-    wikipages = load_xml_data("../created_datas/wikipair_de_en.xml")  #to load wikipages
+    wikipages = load_xml_data("../created_datas/x1")  #to load wikipages
     wikipairs = get_all_pairs(wikipages) #to get all wikipairs
     #fw = open("deu_tagged.txt", "w")
     index = -1    
@@ -253,9 +253,10 @@ if __name__ == "__main__":
         deu_content = set(get_content(source, "German_Content"))
         
         #returns words with translations word:translations
-        possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict, prepositions) 
+        possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict, prepositions)
+        pdb.set_trace() 
         tagged_english_words = tag_content(possible_words_dict, wordnet,
-            set(eng_content))
+            eng_content)
         senses_found = list(tagged_english_words.values())
 
 

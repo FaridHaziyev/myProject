@@ -25,6 +25,7 @@ source = get_source(pair1)
 target = get_target(pair1)
 source_actual_name = get_page_actual_name(source)
 target_name = get_page_name(target)
+print(target_name)
 target_actual_name = get_page_actual_name(target)
 definition_words = ["apple", "juice"]
 page_in_wordnet = False

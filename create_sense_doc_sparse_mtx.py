@@ -20,11 +20,11 @@ for sense in sense_doc_dict:
         data.append(math.log10(2)*math.log10(852311/len(sense_doc_dict[sense])))
     index += 1
     print(index)
-pdb.set_trace()
+
 sense_doc_mtx = sp.csc_matrix((data, (rows, cols)), shape=(72911, 852311))
-sp.save_npz('en_sense_doc_matrix.npz', sense_doc_mtx)
+sp.save_npz('../created_datas/en_sense_doc_matrix.npz', sense_doc_mtx)
  
-sense_index_file = open("en_sense_index_dict.pkl", "wb")
+sense_index_file = open("../created_datas/en_sense_index_dict.pkl", "wb")
 
 pickle.dump(sense_index_dict, sense_index_file)
 

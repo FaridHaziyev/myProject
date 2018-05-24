@@ -5,15 +5,15 @@ import numpy as np
 from nltk.corpus import wordnet
 import pdb
 
-deu_matr = sp.load_npz("deu_term_doc_matrix.npz")
-eng_sense_matr = sp.load_npz("en_sense_doc_matrix.npz")
+deu_matr = sp.load_npz("../created_datas/deu_term_doc_matrix.npz")
+eng_sense_matr = sp.load_npz("../created_datas/en_sense_doc_matrix.npz")
 
-with open("en_sense_index_dict.pkl", "rb") as esd:
+with open("../created_datas/en_sense_index_dict.pkl", "rb") as esd:
     eng_sense_index = pickle.load(esd)
 
 eng_index_sense = {v:k for k,v in eng_sense_index.items()}
 
-with open("deu_word_index_dict.pkl", "rb") as dwi:
+with open("../created_datas/deu_word_index_dict.pkl", "rb") as dwi:
     deu_word_ind = pickle.load(dwi)
 
 deu_matr = deu_matr.tocsr()
@@ -28,7 +28,7 @@ a3 = [x[0] for x in a2.tolist()]
 pdb.set_trace()"""
 
 a1 = deu_norm.dot(eng_norm)
-
+pdb.set_trace()
 a2 = np.argmax(a1, axis = 1)
 a3 = [x[0] for x in a2.tolist()]
 pdb.set_trace()
@@ -38,7 +38,7 @@ def getSynsetId(syn):
     synset = wordnet.synset(syn)
     return (8-len(str(synset.offset())))*"0" + str(synset.offset()) + "-" + synset.pos()
 
-fw = open("resuls_deu.txt", "w")
+fw = open("../resuls_deu.txt", "w")
 """for index,val in enumerate(a3):
     print(deu_word_ind[index] + "\t" + str(eng_index_sense[val]), file = fw)"""
 

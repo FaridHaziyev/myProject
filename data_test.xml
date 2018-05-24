@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+  <DATA>
+	<Pair>
+	   <Pair_Id>1</Pair_Id>
+	   <Source>
+	    <Name>Ryegatea</Name>
+	    <Actual_Name>Ryegatea (obligata)</Actual_Name>
+	    <Links>
+	     ryegate,montana
+	     ryegate,vermont
+	    </Links>
+	    <German_Content>
+	     ryegate,ist,der,name,mehrerer,orte,den,vereinigten,staaten
+	     ryegate,montana
+	     ryegate,vermont, apfel, apfelholz
+	     
+	    </German_Content>
+	    <German_Categories></German_Categories>
+	   </Source>
+	   <Target>
+	    <Name>Apple</Name>
+	    <Actual_Name>Apple</Actual_Name>
+	    <Links>
+	     ryegate,montana
+	     ryegate,vermont
+	     reigate
+	    </Links>
+	    <English_Content>
+	     ryegate,may,refer,state,
+	     ryegate,montana,town
+	     ryegate,vermont,town
+	     h,see,also,h
+	     reigate, apple
+	     
+	    </English_Content>
+	    <English_Categories>ala, 
+ala,
+bula,
+#boz,
+boz
+ala
+keçi	</English_Categories>
+	   </Target>
+	  </Pair>
+  </DATA>
