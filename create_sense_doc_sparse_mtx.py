@@ -3,7 +3,7 @@ import scipy.sparse as sp
 import math
 import pdb
 
-with open("sense_doc_dict_updated.pkl", "rb") as sd:
+with open("sense_doc_dict.pkl", "rb") as sd:
     sense_doc_dict = pickle.load(sd)
 
 index = 0
@@ -21,7 +21,8 @@ for sense in sense_doc_dict:
     index += 1
     print(index)
 
-sense_doc_mtx = sp.csc_matrix((data, (rows, cols)), shape=(72911, 852311))
+
+sense_doc_mtx = sp.csc_matrix((data, (rows, cols)), shape=(len(set(rows)), 852311))
 sp.save_npz('../created_datas/en_sense_doc_matrix.npz', sense_doc_mtx)
  
 sense_index_file = open("../created_datas/en_sense_index_dict.pkl", "wb")

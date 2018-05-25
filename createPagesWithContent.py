@@ -254,7 +254,7 @@ if __name__ == "__main__":
         
         #returns words with translations word:translations
         possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict, prepositions)
-        pdb.set_trace() 
+        #pdb.set_trace() 
         tagged_english_words = tag_content(possible_words_dict, wordnet,
             eng_content)
         senses_found = list(tagged_english_words.values())
