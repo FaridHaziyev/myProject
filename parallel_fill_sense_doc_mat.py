@@ -242,7 +242,7 @@ if __name__ == "__main__":
 "that","than", "is", "he", "she", "it", "we", "you", "they", "a","an", "am", "are", "or","term", "much", "many","any", "have","has", "had",
 "having"}
 
-    with open("../merged_eng_deu_dict.pkl", "rb") as dep:
+    with open("../eng_deu_dict.pkl", "rb") as dep:
         deu_en_dict = pickle.load(dep)
 
     with open("../created_datas/sense_doc_dict_empty.pkl", "rb") as ev:
