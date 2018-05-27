@@ -94,13 +94,19 @@ def get_possible_synsets(definition_words, page_name):
 
 
 def get_links(page):
-    links = page.getElementsByTagName("Links")[0].firstChild.data
+    links_child = page.getElementsByTagName("Links")[0].firstChild
+    if not links_child:
+        return set()
+    links = links_child.data
     links = links.replace("\n", " ").replace("\t"," ")
     links = set(re.findall("\w+", links))
     return links
 
 def get_cattegories(page):
-    cattegories = page.getElementsByTagName("English_Categories")[0].firstChild.data
+    categories_child = page.getElementsByTagName("English_Categories")[0].firstChild
+    if not categories_child:
+        return set()
+    cattegories = categories_child.data
     cattegories = cattegories.replace("\n", " ").replace("\t", " ")
     cattegories = set(re.findall("\w+", cattegories))
     return cattegories
@@ -189,6 +195,7 @@ def tag_content(possible_words_dict, wn, english_content):
         max_score = [0, None]
         for synset in pos_synsets:
             def_words = get_definition_words(synset)
+
             intersection = len(def_words.intersection(english_content))
             score = intersection / len(english_content)
             if score > max_score[0]:
@@ -220,11 +227,19 @@ def fill_sense_doc_mat(part, count, part_len):
         eng_content = get_content(target, "English_Content")
         deu_content = set(get_content(source, "German_Content"))
         
+        links = get_links(target) #get all the links in the target (english) part
+        cattegories = get_cattegories(target) #English_Categorie
+        
+        page_context = links.union(cattegories) 
         #returns words with translations word:translations
         possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict, prepositions)
+        if not page_context:
+            continue
+
+
 
         tagged_english_words = tag_content(possible_words_dict, wordnet,
-            eng_content)
+            page_context)
         senses_found = list(tagged_english_words.values())
 
         #results = []
@@ -242,7 +257,7 @@ if __name__ == "__main__":
 "that","than", "is", "he", "she", "it", "we", "you", "they", "a","an", "am", "are", "or","term", "much", "many","any", "have","has", "had",
 "having"}
 
-    with open("../eng_deu_dict.pkl", "rb") as dep:
+    with open("../merged_eng_deu_dict.pkl", "rb") as dep:
         deu_en_dict = pickle.load(dep)
 
     with open("../created_datas/sense_doc_dict_empty.pkl", "rb") as ev:
