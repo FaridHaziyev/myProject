@@ -1,7 +1,6 @@
 #In this Module wikipairs are used and pages are
 #created for each pair, and in this pages content 
 #of english and german wikipage is also added,
-#most frequent 10 words in the content are added.
 
 from xml.dom.minidom import parse, parseString
 from nltk.corpus import wordnet,stopwords
@@ -119,13 +118,8 @@ def get_content(page, language):
     return contents  
     
 
-def get_possible_words(eng_content, german_content, deu_en_dict, prepositions): 
+def get_possible_words(eng_content, german_content, deu_en_dict): 
     """words that have sense in wordnet and translation in german"""
-    #content_count = [(word,eng_content.count(word)) for word in eng_content]
-    #content_top = [word for (word,count) in sorted(content_count, key = lambda x: x[1], reverse = True)]
-    #if len(content_top) > 10:
-        #content_top = content_top[0:10]
-
     #check if the word is in wordnet
     content_top = eng_content  
     content_pos = [x for x in content_top if wordnet.synsets(x)]     
@@ -147,7 +141,7 @@ def get_possible_words(eng_content, german_content, deu_en_dict, prepositions):
                 
     
     return {word:translations for word, translations in
-            content_translations.items() if translations and word not in prepositions}
+            content_translations.items() if translations and len(word) > 2}
  
 def getSynsetId(synset):
     return (8-len(str(synset.offset())))*"0" + str(synset.offset()) + "-" + synset.pos()
@@ -155,57 +149,115 @@ def getSynsetId(synset):
 def get_sense_contexts(synsets):
     sense_contexts = {}  
     for s in synsets:
-        alsenses = []
-        hypers = s.hypernyms()
-        alsenses.extend(hypers)
-        alsenses.extend(s.hyponyms())
-        
+        hypernyms = s.hypernyms()
         synonyms = [x for x in synsets if x != s]
-        alsenses.extend(synonyms)
         sisterhood = []
 
-        for hyper in hypers:
-            hyp = hyper.hyponyms()
-            hyp = [x for x in hyp if x != s]
-            sisterhood.extend(hyp)
+        for h in hypernyms:
+            hyponyms = [x for x in h.hyponyms() if x != s]
+            sisterhood.extend(hyponyms)
         
-        alsenses.extend(sisterhood)
+        allsenses = set(hypernyms + synonyms + sisterhood + s.hyponyms() +
+                s.member_meronyms() + s.substance_meronyms() + s.part_meronyms() +
+                s.member_holonyms() + s.substance_holonyms() + s.part_holonyms()) 
         sense_lemmas = []
-        for syn_s in alsenses:
+        for syn_s in allsenses:
             lemmas = syn_s.lemmas()
             sense_lemmas.extend(lemmas)
         sense_lemmas = set(sense_lemmas)
         sense_lemmas = set(map(lambda x: x.name(), sense_lemmas))
         
-        s_context = [x.lower() for x in sense_lemmas if x not in stopWords and len(x) > 1]
-        sn = getSynsetId(s)
-        sense_contexts[sn] = s_context
+        s_context = [x.lower() for x in sense_lemmas if x not in stopWords and len(x) > 3]
+       
+        sense_contexts[s] = set(s_context)
 
     return sense_contexts
 
+def get_word_count(english_content):
+    word_count = {}
+    for w in english_content:
+        word_count[w] = word_count.get(w,0) + 1
+    return word_count
 
 def get_definition_words(synset):
     definition = synset.definition()
     return set(re.findall("\w+", definition))
 
-def tag_content(possible_words_dict, wn, english_content):
-    tagged_content = {}
-    for word in possible_words_dict:
-        pos_synsets = wn.synsets(word)
-        max_score = [0, None]
-        for synset in pos_synsets:
-            def_words = get_definition_words(synset)
+def calc_avg_score(a,b):
+    if check_avg_score(a,b):
+        return (a+b)/2
+    return 0
 
-            intersection = len(def_words.intersection(english_content))
-            score = intersection / len(english_content)
-            if score > max_score[0]:
-                max_score[0] = score
-                max_score[1] = synset.name()
+def calc_def_score(sense_context, page_context):
+    score = len(sense_context.intersection(page_context)) / len(page_context)
+    return score
+
+def check_avg_score(a,b):
+    if a == 0 and b == 0:
+        return False
+    return True    
+
+def get_champ(pos_synsets, page_context, tagged_monosem):
+    max_score = [0,None]
+
+    for synset in pos_synsets:
+        sense_context = get_definition_words(synset)
+        score_to_mono = 0
+        if len(tagged_monosem) > 0:
+            score_to_mono = get_score_tomono(tagged_monosem, synset)
+     
+        def_score = calc_def_score(sense_context, page_context)
         
-        if max_score[0] > 0:
-            tagged_content[word] = max_score[1]
+        score = calc_avg_score(score_to_mono, def_score)
+        
+        if score > max_score[0]:
+            max_score[0] = score
+            max_score[1] = synset.name()
 
+    if max_score[0] > 0:
+        return max_score[1]
+
+
+def tag_monosem(possible_words, wn, word_counts): #word_counts count of a word in content
+    tagged_words = {}
+    for word in possible_words:
+        pos_synsets = wn.synsets(word)
+        if len(pos_synsets) == 1:
+            tagged_words[word] = (pos_synsets[0], word_counts[word])
+    return tagged_words
+
+def get_score_tomono(tagged_mono, synset):
+    score = 0
+
+    for mono in tagged_mono:
+        sim = synset.wup_similarity(tagged_mono[mono][0])
+        sim = sim if sim else 0
+        score += sim
+
+    avg_score = score / len(tagged_mono)
+    return avg_score
+
+
+def tag_content(possible_words_dict, wn, english_content, word_count, tagged_monosem, page_context=None):
+    tagged_content = {}
+
+    for word in possible_words_dict:
+        if word in tagged_monosem:
+            continue
+        pos_synsets = wn.synsets(word)
+        if not pos_synsets:
+            continue
+        
+        def_synset = get_champ(pos_synsets,english_content, tagged_monosem)
+
+        if def_synset:
+            tagged_content[word] = (def_synset, word_count[word])
+
+    tagged_monosem = {x:(y.name(),c) for x,(y,c) in tagged_monosem.items()}
+    tagged_content.update(tagged_monosem)
     return tagged_content
+
+
 
 def map_eng_to_deu(tagged_eng, eng_deu_translations_dict):
     deu_tagged = {}
@@ -221,68 +273,57 @@ def fill_sense_doc_mat(part, count, part_len):
     index = count*part_len
 
     fw = open("files/" + str(count) + ".txt", "w")
+
     for pair in part:
         source = get_source(pair) # to get the source language part
         target = get_target(pair) #to get the target language part
         eng_content = get_content(target, "English_Content")
         deu_content = set(get_content(source, "German_Content"))
         
-        links = get_links(target) #get all the links in the target (english) part
-        cattegories = get_cattegories(target) #English_Categorie
-        
-        page_context = links.union(cattegories) 
         #returns words with translations word:translations
-        possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict, prepositions)
-        if not page_context:
-            continue
+        possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict)
+        
+        word_counts = get_word_count(eng_content)
+        tagged_monosem = tag_monosem(possible_words_dict, wordnet, word_counts)
 
+        tagged_english_words = tag_content(possible_words_dict, wordnet, 
+                                           eng_content, word_counts, tagged_monosem)
 
-
-        tagged_english_words = tag_content(possible_words_dict, wordnet,
-            page_context)
         senses_found = list(tagged_english_words.values())
 
-        #results = []
         for sense in senses_found:
-            print(sense + "\t" + str(index), file = fw)
-            #results.append((sense, index))
+            print(sense[0] + "\t" + str(sense[1]) + "\t" + str(index), file = fw)
         index += 1
-    #return results
 
 
 
 if __name__ == "__main__":
     all_pages = []
-    prepositions = {'despite', 'beyond', 'around', 'through', 'after', 'off', 'until', 'near', 'concerning', 'across', 'up', 'below', 'in', 'except', 'without', 'from', 'instead', 'before', 'beneath', 'inspite', 'upon', 'by', 'of', 'outside', 'against', 'over', 'on', 'but', 'within', 'throughout', 'among', 'behind', 'with', 'during', 'into', 'underneath', 'for', 'to', 'about', 'under', 'besides', 'along', 'out', 'beside', 'at', 'above', 'toward', 'inside', 'since', 'between', 'regarding', 'like', 'front', 'because', 'onto', 'down', "the", "and",
-"that","than", "is", "he", "she", "it", "we", "you", "they", "a","an", "am", "are", "or","term", "much", "many","any", "have","has", "had",
-"having"}
-
     with open("../merged_eng_deu_dict.pkl", "rb") as dep:
         deu_en_dict = pickle.load(dep)
 
-    with open("../created_datas/sense_doc_dict_empty.pkl", "rb") as ev:
-        sense_doc_dict = pickle.load(ev)
-
     wikipages = load_xml_data("../created_datas/wikipair_de_en.xml")  #to load wikipages
     wikipairs = get_all_pairs(wikipages) #to get all wikipairs
-
-    n = 20
+    print(len(wikipairs))
+    #fill_sense_doc_mat(wikipairs, 1,0)
+    n = 800
     threads = []
     p_length = len(wikipairs) // n
-
+    threads = []
     for i in range(n):
         start = i*p_length
         if i == n - 1:
             end = len(wikipairs)           
-            mp.Process(target= fill_sense_doc_mat, args = (wikipairs[start:end],
-                i, p_length,)).start()
+            threads.append(mp.Process(target= fill_sense_doc_mat, args = (wikipairs[start:end],
+                i, p_length,)))
         else:
             end = i*p_length + p_length
-            mp.Process(target= fill_sense_doc_mat, args = (wikipairs[start:end],
-                i, p_length,)).start()
-
-    """with open("some_file.txt", "w") as sf:
-        print(f"Index:{index}")
-    
-    with open("sense_doc_dict_updated.pkl", "wb") as su:
-        pickle.dump(sense_doc_dict, su)"""
+            threads.append(mp.Process(target= fill_sense_doc_mat, args = (wikipairs[start:end],
+                i, p_length,)))
+    a = 40
+    b = 20
+    for x in range(a):
+        for y in range(b):
+            threads[x*b+y].start()
+        for z in range(b):
+            threads[x*b+z].join()

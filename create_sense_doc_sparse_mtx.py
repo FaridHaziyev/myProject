@@ -16,8 +16,8 @@ for sense in sense_doc_dict:
     sense_index_dict[sense] = index
     for doc in sense_doc_dict[sense]:
         rows.append(index)
-        cols.append(doc)
-        data.append(math.log10(2)*math.log10(852311/len(sense_doc_dict[sense])))
+        cols.append(doc[0])
+        data.append(math.log10(1+doc[1])*math.log10(852311/len(sense_doc_dict[sense])))
     index += 1
     print(index)
 

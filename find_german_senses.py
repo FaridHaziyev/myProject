@@ -4,44 +4,80 @@ import pickle
 import numpy as np
 from nltk.corpus import wordnet
 import pdb
+from collections import defaultdict
 
 deu_matr = sp.load_npz("../created_datas/deu_term_doc_matrix.npz")
 eng_sense_matr = sp.load_npz("../created_datas/en_sense_doc_matrix.npz")
 
+
 with open("../created_datas/en_sense_index_dict.pkl", "rb") as esd:
     eng_sense_index = pickle.load(esd)
 
-eng_index_sense = {v:k for k,v in eng_sense_index.items()}
 
-with open("../created_datas/deu_word_index_dict.pkl", "rb") as dwi:
-    deu_word_ind = pickle.load(dwi)
+def tag_words(deu_m, eng_m):
+    word_sense_matr = deu_m.dot(eng_m)
+    word_sense_matr = word_sense_matr.tocoo()
+    w_s_dict = defaultdict(list)
 
-deu_matr = deu_matr.tocsr()
-eng_sense_matr = eng_sense_matr.tocsr().transpose()
+    temp = []
+    rn = 0
+    for (row,col,score) in zip(word_sense_matr.row, word_sense_matr.col, word_sense_matr.data):
+        if row != rn:
+            temp_sorted = sorted(temp, key = lambda x:x[1], reverse = True)
+            
+            if len(temp_sorted) > 10:
+                temp_sorted = temp_sorted[:10]
+            w_s_dict[rn] = temp_sorted
+            rn = row
+            temp = []
+        temp.append((col, score))
 
-deu_norm = normalize(deu_matr, norm="l2", axis=1)
-eng_norm = normalize(eng_sense_matr, norm = "l2", axis = 0)
 
-"""a1 = deu_matr[0:1000,:].dot(eng_sense_matr)
-a2 = np.argmax(a1, axis = 1)
-a3 = [x[0] for x in a2.tolist()]
-pdb.set_trace()"""
+    word_tag = defaultdict(list) #key-word value-synsets
 
-a1 = deu_norm.dot(eng_norm)
-pdb.set_trace()
-a2 = np.argmax(a1, axis = 1)
-a3 = [x[0] for x in a2.tolist()]
-pdb.set_trace()
-a4 = [(x,a3[x]) for x in range(len(a3))]
+    for w, senses in w_s_dict.items():
+        word = deu_word_ind[w]
+        for s in senses:
+            s_ = eng_index_sense[s[0]]
+            ws = wordnet.synset(s_) #synset in the wordnet
+
+            lemmas = [lem.name() for lem in ws.lemmas()]
+            if any(x for x in lemmas if x in deu_eng[word]):
+                synset_ = getSynsetId(s_)
+                word_tag[word].append(synset_)
+
+    fw = open("tagged_file.txt", "w")
+    for word, synset in word_tag.items():
+        print(f"{word}\t{synset}", file = fw)
 
 def getSynsetId(syn):
     synset = wordnet.synset(syn)
     return (8-len(str(synset.offset())))*"0" + str(synset.offset()) + "-" + synset.pos()
 
-fw = open("../resuls_deu.txt", "w")
-"""for index,val in enumerate(a3):
-    print(deu_word_ind[index] + "\t" + str(eng_index_sense[val]), file = fw)"""
 
-for x in a4:
-    print(deu_word_ind[x[0]] + "\t" + getSynsetId(str(eng_index_sense[x[1]])), file = fw)
+
+
+if __name__ == "__main__":
+    eng_index_sense = {v:k for k,v in eng_sense_index.items()}
+
+    with open("../created_datas/deu_word_index_dict.pkl", "rb") as dwi:
+        deu_word_ind = pickle.load(dwi)
+
+    with open("../merged_deu_eng_dict.pkl", "rb") as f:
+        deu_eng = pickle.load(f)
+
+    deu_matr = deu_matr.tocsr()
+    eng_sense_matr = eng_sense_matr.tocsr().transpose()
+
+    tag_words(deu_matr, eng_sense_matr)
+
+
+
+
+
+
+
+
+
+
 
