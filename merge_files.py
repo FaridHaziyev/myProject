@@ -1,8 +1,8 @@
 import os
 import csv
+from collections import defaultdict
 import pdb
 import pickle
-from collections import defaultdict
 
 files = os.listdir("files")
 
@@ -17,8 +17,8 @@ for f_ in files:
             sense_doc = line.strip().split("\t")
             if sense_doc[0] not in sense_doc_dict:
                 continue
+            all_merged[sense_doc[0]].add(int(sense_doc[1]))
 
-            all_merged[sense_doc[0]].add((int(sense_doc[2]), int(sense_doc[1])))
 
 with open("sense_doc_dict.pkl", "wb") as fw:
     pickle.dump(all_merged, fw)

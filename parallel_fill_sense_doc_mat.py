@@ -13,6 +13,10 @@ import multiprocessing as mp
 stopWords = set(stopwords.words("english"))
 lmtzr = WordNetLemmatizer()
 
+
+with open("../created_datas/vocab_weights.pkl", "rb") as fr:
+    vocab_weights = pickle.load(fr)
+
 class Page:
     def __init__(self, page_id, source_actual,target_actual,lemmatized_name,
                        source_content, target_content, words_context, pos_synsets, s_contexts, possible_words):
@@ -181,6 +185,7 @@ def get_word_count(english_content):
 
 def get_definition_words(synset):
     definition = synset.definition()
+    pdb.set_trace()
     return set(re.findall("\w+", definition))
 
 def calc_avg_score(a,b):
@@ -189,7 +194,12 @@ def calc_avg_score(a,b):
     return 0
 
 def calc_def_score(sense_context, page_context):
-    score = len(sense_context.intersection(page_context)) / len(page_context)
+    intersection = sense_context.intersection(page_context)
+    score = 0
+
+    for word in intersection:
+        score += vocab_weights.get(word,0)
+
     return score
 
 def check_avg_score(a,b):
@@ -197,18 +207,13 @@ def check_avg_score(a,b):
         return False
     return True    
 
-def get_champ(pos_synsets, page_context, tagged_monosem):
+def get_champ(pos_synsets, page_context):
     max_score = [0,None]
 
     for synset in pos_synsets:
         sense_context = get_definition_words(synset)
-        score_to_mono = 0
-        if len(tagged_monosem) > 0:
-            score_to_mono = get_score_tomono(tagged_monosem, synset)
      
-        def_score = calc_def_score(sense_context, page_context)
-        
-        score = calc_avg_score(score_to_mono, def_score)
+        score = calc_def_score(sense_context, page_context)
         
         if score > max_score[0]:
             max_score[0] = score
@@ -218,43 +223,15 @@ def get_champ(pos_synsets, page_context, tagged_monosem):
         return max_score[1]
 
 
-def tag_monosem(possible_words, wn, word_counts): #word_counts count of a word in content
-    tagged_words = {}
-    for word in possible_words:
-        pos_synsets = wn.synsets(word)
-        if len(pos_synsets) == 1:
-            tagged_words[word] = (pos_synsets[0], word_counts[word])
-    return tagged_words
-
-def get_score_tomono(tagged_mono, synset):
-    score = 0
-
-    for mono in tagged_mono:
-        sim = synset.wup_similarity(tagged_mono[mono][0])
-        sim = sim if sim else 0
-        score += sim
-
-    avg_score = score / len(tagged_mono)
-    return avg_score
-
-
-def tag_content(possible_words_dict, wn, english_content, word_count, tagged_monosem, page_context=None):
+def tag_content(possible_words_dict, wn, english_content):
     tagged_content = {}
 
     for word in possible_words_dict:
-        if word in tagged_monosem:
-            continue
         pos_synsets = wn.synsets(word)
-        if not pos_synsets:
-            continue
-        
-        def_synset = get_champ(pos_synsets,english_content, tagged_monosem)
+        def_synset = get_champ(pos_synsets,english_content)
 
         if def_synset:
-            tagged_content[word] = (def_synset, word_count[word])
-
-    tagged_monosem = {x:(y.name(),c) for x,(y,c) in tagged_monosem.items()}
-    tagged_content.update(tagged_monosem)
+            tagged_content[word] = def_synset
     return tagged_content
 
 
@@ -282,17 +259,15 @@ def fill_sense_doc_mat(part, count, part_len):
         
         #returns words with translations word:translations
         possible_words_dict = get_possible_words(eng_content, deu_content, deu_en_dict)
-        
-        word_counts = get_word_count(eng_content)
-        tagged_monosem = tag_monosem(possible_words_dict, wordnet, word_counts)
 
         tagged_english_words = tag_content(possible_words_dict, wordnet, 
-                                           eng_content, word_counts, tagged_monosem)
+                                           eng_content)
 
         senses_found = list(tagged_english_words.values())
 
         for sense in senses_found:
-            print(sense[0] + "\t" + str(sense[1]) + "\t" + str(index), file = fw)
+            print(sense + "\t" + str(index), file = fw)
+
         index += 1
 
 
@@ -302,11 +277,11 @@ if __name__ == "__main__":
     with open("../merged_eng_deu_dict.pkl", "rb") as dep:
         deu_en_dict = pickle.load(dep)
 
-    wikipages = load_xml_data("../created_datas/wikipair_de_en.xml")  #to load wikipages
+    wikipages = load_xml_data("../created_datas/x1")  #to load wikipages
     wikipairs = get_all_pairs(wikipages) #to get all wikipairs
     print(len(wikipairs))
-    #fill_sense_doc_mat(wikipairs, 1,0)
-    n = 800
+    fill_sense_doc_mat(wikipairs, 1,0)
+    """n = 800
     threads = []
     p_length = len(wikipairs) // n
     threads = []
@@ -326,4 +301,4 @@ if __name__ == "__main__":
         for y in range(b):
             threads[x*b+y].start()
         for z in range(b):
-            threads[x*b+z].join()
+            threads[x*b+z].join()"""

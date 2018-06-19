@@ -6,6 +6,8 @@ import pdb
 with open("sense_doc_dict.pkl", "rb") as sd:
     sense_doc_dict = pickle.load(sd)
 
+DOC_COUNT = 852311
+
 index = 0
 rows = []
 cols = []
@@ -16,13 +18,13 @@ for sense in sense_doc_dict:
     sense_index_dict[sense] = index
     for doc in sense_doc_dict[sense]:
         rows.append(index)
-        cols.append(doc[0])
-        data.append(math.log10(1+doc[1])*math.log10(852311/len(sense_doc_dict[sense])))
+        cols.append(doc)
+        data.append(math.log10(2)*math.log10(DOC_COUNT/len(sense_doc_dict[sense])))
     index += 1
     print(index)
 
 
-sense_doc_mtx = sp.csc_matrix((data, (rows, cols)), shape=(len(set(rows)), 852311))
+sense_doc_mtx = sp.csc_matrix((data, (rows, cols)), shape=(len(set(rows)), DOC_COUNT))
 sp.save_npz('../created_datas/en_sense_doc_matrix.npz', sense_doc_mtx)
  
 sense_index_file = open("../created_datas/en_sense_index_dict.pkl", "wb")
